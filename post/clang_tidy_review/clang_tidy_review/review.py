@@ -15,6 +15,7 @@ from clang_tidy_review import (
     add_auth_arguments,
     bool_argument,
     create_review,
+    exclude_files_not_in_compile_commands,
     fix_absolute_paths,
     get_auth_from_arguments,
     message_group,
@@ -155,6 +156,9 @@ def main():
         fix_absolute_paths(build_compile_commands, args.base_dir)
 
     pull_request = PullRequest(args.repo, args.pr, get_auth_from_arguments(args))
+
+    if Path(build_compile_commands).exists():
+        exclude = exclude_files_not_in_compile_commands(pull_request, build_compile_commands, exclude)
 
     review = create_review(
         pull_request,
