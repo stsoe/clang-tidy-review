@@ -919,6 +919,41 @@ def filter_files(diff, include: List[str], exclude: List[str]) -> List:
 
     return files
 
+def is_file_in_compile_commands(file: str, compile_commands: List[Dict[str,Any]]) -> bool:
+    for entry in compile_commands:
+        entry_file = entry["file"]
+        if entry_file.endswith(file):
+            return True;
+
+    return False
+
+def is_header_file(file: str) -> bool:
+    _, extension = os.path.splitext(file)
+    return extension.lower() in ['.h','.hpp', '.hxx', '.hh']
+
+def exclude_files_not_in_compile_commands(
+    pull_request: PullRequest,
+    build_compile_commands: str,
+    exclude: List[str]
+) -> List:
+    with Path(build_compile_commands).open() as f:
+        compile_commands = json.load(f)
+
+    diff = pull_request.get_pr_diff()
+
+    changed_files = [filename.target_file[2:] for filename in diff]
+
+    for file in changed_files:
+        # do not exclude header files, they should be reported on
+        # if they are included by any cpp that is not excluded
+        if is_header_file(file):
+            continue
+        
+        if not is_file_in_compile_commands(file, compile_commands):
+            print(f"Excluding {file} as it is not in compile_commands.json")
+            exclude.append(file)
+
+    return exclude
 
 def create_review(
     pull_request: PullRequest,
